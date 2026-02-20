@@ -1,4 +1,5 @@
-import axiosClient from "../axiosClient";
+import api from "../api";
+import type { PaginatedResponse, BaseQueryParams } from "../types/pagination";
 
 export interface Schedule {
   id: number;
@@ -21,25 +22,52 @@ export interface ScheduleListItem {
   slotDuration: string;
 }
 
+const $URL = "/schedules";
+
 export const ScheduleService = {
-  getAvailableSlots: (doctorId: number, date: string) =>
-    axiosClient.get<string[]>(`/Schedule/available-slots?doctorId=${doctorId}&date=${date}`),
+  getAvailableSlots: async (
+    doctorId: number,
+    date: string
+  ): Promise<string[]> => {
+    const response = await api.get<string[]>(`${$URL}/available-slots`, {
+      params: { doctorId, date },
+    });
+    return response.data;
+  },
 
-  getAll: () =>
-    axiosClient.get<ScheduleListItem[]>("/Schedule"),
+  getAll: async (
+    params?: BaseQueryParams
+  ): Promise<PaginatedResponse<ScheduleListItem>> => {
+    const response = await api.get<PaginatedResponse<ScheduleListItem>>($URL, {
+      params,
+    });
+    return response.data;
+  },
 
-  getByDoctorId: (doctorId: number) =>
-    axiosClient.get<ScheduleListItem[]>(`/Schedule/doctor-schedule?id=${doctorId}`),
+  getByDoctorId: async (doctorId: number): Promise<ScheduleListItem[]> => {
+    const response = await api.get<ScheduleListItem[]>(
+      `${$URL}/doctor-schedule`,
+      { params: { id: doctorId } }
+    );
+    return response.data;
+  },
 
-  getById: (id: number) =>
-    axiosClient.get<Schedule>(`/Schedule/${id}`),
+  getById: async (id: number): Promise<Schedule> => {
+    const response = await api.get<Schedule>(`${$URL}/${id}`);
+    return response.data;
+  },
 
-  create: (data: Omit<Schedule, "id">) =>
-    axiosClient.post("/Schedule", data),
+  create: async (data: Omit<Schedule, "id">): Promise<Schedule> => {
+    const response = await api.post<Schedule>($URL, data);
+    return response.data;
+  },
 
-  update: (id: number, data: Schedule) =>
-    axiosClient.put(`/Schedule/${id}`, data),
+  update: async (id: number, data: Schedule): Promise<Schedule> => {
+    const response = await api.put<Schedule>(`${$URL}/${id}`, data);
+    return response.data;
+  },
 
-  delete: (id: number) =>
-    axiosClient.delete(`/Schedule/${id}`),
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`${$URL}/${id}`);
+  },
 };

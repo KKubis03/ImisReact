@@ -1,4 +1,5 @@
-import axiosClient from "../axiosClient";
+import api from "../api";
+import type { SelectListItem, BaseQueryParams } from "../types/pagination";
 
 export interface Doctor {
   id: number;
@@ -7,6 +8,8 @@ export interface Doctor {
   licenseNumber: string;
   specializationId: number;
   departmentId: number;
+  specializationName?: string;
+  departmentName?: string;
   email: string;
   phoneNumber: string;
 }
@@ -22,22 +25,73 @@ export interface DoctorListItem {
   phoneNumber: string;
 }
 
+export interface DailyStatistics {
+  day: string;
+  appointments: number;
+  completed: number;
+}
+
+export interface MonthlyStatistics {
+  month: string;
+  appointments: number;
+}
+
+export interface DashboardStatsResponse {
+  weeklyStats: DailyStatistics[];
+  monthlyStats: MonthlyStatistics[];
+}
+
+export interface DashboardRangeResponse {
+  planned: number;
+  completed: number;
+  remaining: number;
+  patients: number;
+}
+
+export interface PaginatedDoctorsResponse {
+  items: DoctorListItem[];
+  totalCount: number;
+  pageNr: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface DoctorQueryParams extends BaseQueryParams {
+  specializationId?: number;
+  departmentId?: number;
+}
+
+const $URL = "/doctors";
+
 export const DoctorsService = {
-  getAll: (url?: string) =>
-    axiosClient.get<DoctorListItem[]>(url || "/doctor"),
+  getAll: async (
+    params?: DoctorQueryParams
+  ): Promise<PaginatedDoctorsResponse> => {
+    const response = await api.get<PaginatedDoctorsResponse>($URL, { params });
+    return response.data;
+  },
 
-  getById: (id: number) =>
-    axiosClient.get<Doctor>(`/doctor/${id}`),
+  getById: async (id: number): Promise<Doctor> => {
+    const response = await api.get<Doctor>(`${$URL}/${id}`);
+    return response.data;
+  },
 
-  create: (data: Omit<Doctor, "id">) =>
-    axiosClient.post("/doctor", data),
+  create: async (data: Omit<Doctor, "id">): Promise<Doctor> => {
+    const response = await api.post<Doctor>($URL, data);
+    return response.data;
+  },
 
-  update: (id: number, data: Doctor) =>
-    axiosClient.put(`/doctor/${id}`, data),
+  update: async (id: number, data: Doctor): Promise<Doctor> => {
+    const response = await api.put<Doctor>(`${$URL}/${id}`, data);
+    return response.data;
+  },
 
-  delete: (id: number) =>
-    axiosClient.delete(`/doctor/${id}`),
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`${$URL}/${id}`);
+  },
 
-  getSelectList: () =>
-    axiosClient.get<{ id: number; fullName: string; departmentName: string }[]>("/doctor/select-list"),
+  getSelectList: async (): Promise<SelectListItem[]> => {
+    const response = await api.get<SelectListItem[]>(`${$URL}/lookup`);
+    return response.data;
+  },
 };

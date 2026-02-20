@@ -1,4 +1,5 @@
-import axiosClient from "../axiosClient";
+import api from "../api";
+import type { PaginatedResponse, BaseQueryParams } from "../types/pagination";
 
 export interface InvoiceStatus {
   id: number;
@@ -6,19 +7,34 @@ export interface InvoiceStatus {
   description: string;
 }
 
-export const InvoiceStatusService = {
-  getAll: (url?: string) =>
-    axiosClient.get<InvoiceStatus[]>(url || "/InvoiceStatus"),
+const $URL = "/invoicestatuses";
 
-  getById: (id: number) =>
-    axiosClient.get<InvoiceStatus>(`/InvoiceStatus/${id}`),
+export const InvoiceStatusesService = {
+  getAll: async (
+    params?: BaseQueryParams
+  ): Promise<PaginatedResponse<InvoiceStatus>> => {
+    const response = await api.get<PaginatedResponse<InvoiceStatus>>($URL, {
+      params,
+    });
+    return response.data;
+  },
 
-  create: (data: Omit<InvoiceStatus, "id">) =>
-    axiosClient.post("/InvoiceStatus", data),
+  getById: async (id: number): Promise<InvoiceStatus> => {
+    const response = await api.get<InvoiceStatus>(`${$URL}/${id}`);
+    return response.data;
+  },
 
-  update: (id: number, data: InvoiceStatus) =>
-    axiosClient.put(`/InvoiceStatus/${id}`, data),
+  create: async (data: Omit<InvoiceStatus, "id">): Promise<InvoiceStatus> => {
+    const response = await api.post<InvoiceStatus>($URL, data);
+    return response.data;
+  },
 
-  delete: (id: number) =>
-    axiosClient.delete(`/InvoiceStatus/${id}`),
+  update: async (id: number, data: InvoiceStatus): Promise<InvoiceStatus> => {
+    const response = await api.put<InvoiceStatus>(`${$URL}/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`${$URL}/${id}`);
+  },
 };

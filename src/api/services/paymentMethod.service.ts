@@ -1,4 +1,9 @@
-import axiosClient from "../axiosClient";
+import api from "../api";
+import type {
+  PaginatedResponse,
+  BaseQueryParams,
+  SelectListItem,
+} from "../types/pagination";
 
 export interface PaymentMethod {
   id: number;
@@ -6,19 +11,39 @@ export interface PaymentMethod {
   description: string;
 }
 
-export const PaymentMethodService = {
-  getAll: (url?: string) =>
-    axiosClient.get<PaymentMethod[]>(url || "/PaymentMethod"),
+const $URL = "/paymentmethods";
 
-  getById: (id: number) =>
-    axiosClient.get<PaymentMethod>(`/PaymentMethod/${id}`),
+export const PaymentMethodsService = {
+  getAll: async (
+    params?: BaseQueryParams
+  ): Promise<PaginatedResponse<PaymentMethod>> => {
+    const response = await api.get<PaginatedResponse<PaymentMethod>>($URL, {
+      params,
+    });
+    return response.data;
+  },
 
-  create: (data: Omit<PaymentMethod, "id">) =>
-    axiosClient.post("/PaymentMethod", data),
+  getLookup: async (): Promise<SelectListItem[]> => {
+    const response = await api.get<SelectListItem[]>(`${$URL}/lookup`);
+    return response.data;
+  },
 
-  update: (id: number, data: PaymentMethod) =>
-    axiosClient.put(`/PaymentMethod/${id}`, data),
+  getById: async (id: number): Promise<PaymentMethod> => {
+    const response = await api.get<PaymentMethod>(`${$URL}/${id}`);
+    return response.data;
+  },
 
-  delete: (id: number) =>
-    axiosClient.delete(`/PaymentMethod/${id}`),
+  create: async (data: Omit<PaymentMethod, "id">): Promise<PaymentMethod> => {
+    const response = await api.post<PaymentMethod>($URL, data);
+    return response.data;
+  },
+
+  update: async (id: number, data: PaymentMethod): Promise<PaymentMethod> => {
+    const response = await api.put<PaymentMethod>(`${$URL}/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`${$URL}/${id}`);
+  },
 };

@@ -1,4 +1,9 @@
-import axiosClient from "../axiosClient";
+import api from "../api";
+import type {
+  PaginatedResponse,
+  SelectListItem,
+  BaseQueryParams,
+} from "../types/pagination";
 
 export interface AppointmentStatus {
   id: number;
@@ -6,27 +11,44 @@ export interface AppointmentStatus {
   description: string;
 }
 
-export interface AppointmentStatusSelectOption {
-  id: number;
-  name: string;
-}
+const $URL = "/appointmentStatuses";
 
 export const AppointmentStatusesService = {
-  getAll: (url?: string) =>
-    axiosClient.get<AppointmentStatus[]>(url || "/AppointmentStatus"),
+  getAll: async (
+    params?: BaseQueryParams
+  ): Promise<PaginatedResponse<AppointmentStatus>> => {
+    const response = await api.get<PaginatedResponse<AppointmentStatus>>($URL, {
+      params,
+    });
+    return response.data;
+  },
 
-  getSelectList: () =>
-    axiosClient.get<AppointmentStatusSelectOption[]>("/AppointmentStatus/select-list"),
+  getSelectList: async (): Promise<SelectListItem[]> => {
+    const response = await api.get<SelectListItem[]>(`${$URL}/lookup`);
+    return response.data;
+  },
 
-  getById: (id: number) =>
-    axiosClient.get<AppointmentStatus>(`/AppointmentStatus/${id}`),
+  getById: async (id: number): Promise<AppointmentStatus> => {
+    const response = await api.get<AppointmentStatus>(`${$URL}/${id}`);
+    return response.data;
+  },
 
-  create: (data: Omit<AppointmentStatus, "id">) =>
-    axiosClient.post("/AppointmentStatus", data),
+  create: async (
+    data: Omit<AppointmentStatus, "id">
+  ): Promise<AppointmentStatus> => {
+    const response = await api.post<AppointmentStatus>($URL, data);
+    return response.data;
+  },
 
-  update: (id: number, data: AppointmentStatus) =>
-    axiosClient.put(`/AppointmentStatus/${id}`, data),
+  update: async (
+    id: number,
+    data: AppointmentStatus
+  ): Promise<AppointmentStatus> => {
+    const response = await api.put<AppointmentStatus>(`${$URL}/${id}`, data);
+    return response.data;
+  },
 
-  delete: (id: number) =>
-    axiosClient.delete(`/AppointmentStatus/${id}`),
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`${$URL}/${id}`);
+  },
 };

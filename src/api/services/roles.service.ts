@@ -1,50 +1,46 @@
-import axiosClient from "../axiosClient";
-
+import api from "../api";
+import type { PaginatedResponse, BaseQueryParams } from "../types/pagination";
 export interface Role {
   id: string;
   name: string;
   normalizedName: string;
   concurrencyStamp: string | null;
 }
+export interface RoleListItem {
+  id: string;
+  name: string;
+}
 
-/**
- * Pobiera listę wszystkich ról
- */
-export const getAllRoles = async (): Promise<Role[]> => {
-  const response = await axiosClient.get<Role[]>("/Roles");
-  return response.data;
-};
+const $URL = "/roles";
+export const RolesService = {
+  getRolesList: async (): Promise<RoleListItem[]> => {
+    const response = await api.get<RoleListItem[]>(`${$URL}/list`);
+    return response.data;
+  },
 
-/**
- * Dodaje rolę użytkownikowi
- */
-export const addUserToRole = async (
-  email: string,
-  roleName: string
-): Promise<void> => {
-  await axiosClient.post(
-    `/Roles/add-to-role?email=${encodeURIComponent(
-      email
-    )}&roleName=${encodeURIComponent(roleName)}`
-  );
-};
+  getAll: async (
+    params?: BaseQueryParams
+  ): Promise<PaginatedResponse<Role>> => {
+    const response = await api.get<PaginatedResponse<Role>>($URL, { params });
+    return response.data;
+  },
 
-/**
- * Usuwa rolę użytkownikowi
- */
-export const removeUserFromRole = async (
-  email: string,
-  roleName: string
-): Promise<void> => {
-  await axiosClient.post(
-    `/Roles/remove-from-role?email=${encodeURIComponent(
-      email
-    )}&roleName=${encodeURIComponent(roleName)}`
-  );
-};
+  addUserToRole: async (email: string, roleName: string): Promise<void> => {
+    await api.post(`${$URL}/add-to-role`, null, {
+      params: { email, roleName },
+    });
+  },
 
-export default {
-  getAllRoles,
-  addUserToRole,
-  removeUserFromRole,
+  removeUserFromRole: async (
+    email: string,
+    roleName: string
+  ): Promise<void> => {
+    await api.post(`${$URL}/remove-from-role`, null, {
+      params: { email, roleName },
+    });
+  },
+
+  createRole: async (roleName: string): Promise<void> => {
+    await api.post(`${$URL}/create`, null, { params: { roleName } });
+  },
 };

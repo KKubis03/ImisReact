@@ -1,215 +1,183 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Container,
-  Box,
-  Typography,
-  Button,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  IconButton,
-  CircularProgress,
-  Alert,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
-  TextField,
-  InputAdornment,
-  Tooltip,
-} from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
+import { TextField, InputAdornment } from "@mui/material";
+import { PATHS } from "../../routes/paths";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import SearchIcon from "@mui/icons-material/Search";
 import {
-  PaymentMethodService,
-  type PaymentMethod,
+	PaymentMethodsService,
+	type PaymentMethod,
 } from "../../api/services/paymentMethod.service";
+import { useDataTable } from "../../hooks/useDataTable";
+import ListPageWrapper from "../../components/table/ListPageWrapper";
+import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import type { Column } from "../../interfaces/TableColumnInterface";
+import type { MenuAction } from "../../interfaces/MenuActionInterface";
 
 export default function PaymentMethodsPage() {
-  const navigate = useNavigate();
-  const [methods, setMethods] = useState<PaymentMethod[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [methodToDelete, setMethodToDelete] = useState<number | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-
-  useEffect(() => {
-    loadMethods();
-  }, [searchTerm]);
-
-  const loadMethods = async () => {
-    try {
-      setLoading(true);
-      const url = searchTerm
-        ? `/PaymentMethod?search=${encodeURIComponent(searchTerm)}`
-        : "/PaymentMethod";
-      const response = await PaymentMethodService.getAll(url);
-      setMethods(response.data);
-      setError("");
-    } catch (err) {
-      setError("Failed to load payment methods");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDeleteClick = (id: number) => {
-    setMethodToDelete(id);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (methodToDelete === null) return;
-
-    try {
-      await PaymentMethodService.delete(methodToDelete);
-      setDeleteDialogOpen(false);
-      setMethodToDelete(null);
-      loadMethods();
-    } catch (err) {
-      setError("Failed to delete payment method");
-      setDeleteDialogOpen(false);
-    }
-  };
-
-  const handleDeleteCancel = () => {
-    setDeleteDialogOpen(false);
-    setMethodToDelete(null);
-  };
-
-  return (
-    <Container maxWidth="lg" sx={{ mt: 10, mb: 6 }}>
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 3,
-        }}
-      >
-        <Box>
-          <Typography variant="h3" color="primary">
-            Payment Methods
-          </Typography>
-          <Typography variant="body1" mt={1}>
-            Below is the list of payment methods.
-          </Typography>
-        </Box>
-        <Tooltip title="Create new payment method">
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={() => navigate("/payment-methods/add")}
-          >
-            New Method
-          </Button>
-        </Tooltip>
-      </Box>
-
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-
-      <Box sx={{ mb: 2 }}>
-        <TextField
-          fullWidth
-          variant="outlined"
-          placeholder="Search payment methods by name"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          }}
-        />
-      </Box>
-
-      {loading ? (
-        <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
-          <CircularProgress />
-        </Box>
-      ) : (
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Method Name</TableCell>
-                <TableCell>Description</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {methods.map((method) => (
-                <TableRow key={method.id}>
-                  <TableCell>{method.methodName}</TableCell>
-                  <TableCell>{method.description}</TableCell>
-                  <TableCell align="right">
-                    <Tooltip title="Edit">
-                      <IconButton
-                        color="primary"
-                        onClick={() =>
-                          navigate(`/payment-methods/edit/${method.id}`)
-                        }
-                      >
-                        <EditIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Delete">
-                      <IconButton
-                        color="error"
-                        onClick={() => handleDeleteClick(method.id)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
-
-      <Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>
-        <DialogTitle>Confirm Delete</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Are you sure you want to delete this payment method? This action
-            cannot be undone.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Tooltip title="Cancel">
-            <Button onClick={handleDeleteCancel} color="primary">
-              Cancel
-            </Button>
-          </Tooltip>
-          <Tooltip title="Delete this item">
-            <Button
-              onClick={handleDeleteConfirm}
-              color="error"
-              variant="contained"
-            >
-              Delete
-            </Button>
-          </Tooltip>
-        </DialogActions>
-      </Dialog>
-    </Container>
-  );
+	const navigate = useNavigate();
+	const [methods, setMethods] = useState<PaymentMethod[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState("");
+	const [filtersExpanded, setFiltersExpanded] = useState(false);
+	const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+	const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(
+		null,
+	);
+	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+	const [isDeleting, setIsDeleting] = useState(false);
+	const {
+		page,
+		setPage,
+		setTotalCount,
+		totalCount,
+		rowsPerPage,
+		sortBy,
+		sortOrder,
+		search,
+		queryParams,
+		handlePageChange,
+		handleRowsPerPageChange,
+		handleSortRequest,
+		handleSearchChange,
+		clearAllFilters,
+	} = useDataTable<{}>();
+	useEffect(() => {
+		loadMethods();
+	}, [queryParams]);
+	const loadMethods = async () => {
+		try {
+			setLoading(true);
+			const response = await PaymentMethodsService.getAll(queryParams);
+			setMethods(response.items);
+			setTotalCount(response.totalCount);
+			setError("");
+		} catch (err) {
+			setError("Failed to load payment methods");
+		} finally {
+			setLoading(false);
+		}
+	};
+	const handleMenuOpen = (
+		event: React.MouseEvent<HTMLElement>,
+		method: PaymentMethod,
+	) => {
+		setAnchorEl(event.currentTarget);
+		setSelectedMethod(method);
+	};
+	const handleMenuClose = () => {
+		setAnchorEl(null);
+	};
+	const handleDeleteConfirm = async () => {
+		if (!selectedMethod) return;
+		try {
+			setIsDeleting(true);
+			await PaymentMethodsService.delete(selectedMethod.id);
+			if (methods.length === 1 && page > 0) {
+				setPage((prev) => prev - 1);
+			} else {
+				loadMethods();
+			}
+			setDeleteDialogOpen(false);
+		} catch (err) {
+			setError("Failed to delete payment method");
+		} finally {
+			setIsDeleting(false);
+			setSelectedMethod(null);
+		}
+	};
+	const columns: Column<PaymentMethod>[] = [
+		{ id: "methodName", label: "Method Name", sortable: true, sortkey: "name" },
+		{
+			id: "description",
+			label: "Description",
+			sortable: true,
+			sortkey: "description",
+		},
+	];
+	const actions: MenuAction<PaymentMethod>[] = [
+		{
+			label: "Edit Method",
+			icon: (
+				<EditIcon
+					fontSize="small"
+					color="primary"
+				/>
+			),
+			onClick: (item) => navigate(PATHS.PAYMENT_METHODS_EDIT(item.id)),
+		},
+		{
+			label: "Delete Method",
+			icon: (
+				<DeleteIcon
+					fontSize="small"
+					color="error"
+				/>
+			),
+			onClick: () => setDeleteDialogOpen(true),
+		},
+	];
+	return (
+		<ListPageWrapper
+			title="Payment Methods"
+			description="Manage available payment methods."
+			addButtonText="New Method"
+			addButtonTooltip="Create new Payment Method"
+			addButtonPath={PATHS.PAYMENT_METHODS_ADD}
+			isLoading={loading}
+			error={error}
+			data={methods}
+			columns={columns}
+			filtersExpanded={filtersExpanded}
+			onFiltersExpandedChange={setFiltersExpanded}
+			onClearFilters={clearAllFilters}
+			filters={
+				<TextField
+					fullWidth
+					size="small"
+					label="Search"
+					placeholder="Method Name"
+					value={search}
+					onChange={handleSearchChange}
+					InputProps={{
+						startAdornment: (
+							<InputAdornment position="start">
+								<SearchIcon />
+							</InputAdornment>
+						),
+					}}
+				/>
+			}
+			pagination={{
+				totalCount,
+				page,
+				rowsPerPage,
+				onPageChange: handlePageChange,
+				onRowsPerPageChange: handleRowsPerPageChange,
+			}}
+			sorting={{ sortBy, sortOrder, onSort: handleSortRequest }}
+			actions={{
+				anchorEl,
+				selectedItem: selectedMethod,
+				onMenuClose: handleMenuClose,
+				onActionClick: handleMenuOpen,
+				menuActions: actions,
+			}}
+			dialogs={
+				<ConfirmDialog
+					open={deleteDialogOpen}
+					onConfirm={handleDeleteConfirm}
+					onClose={() => {
+						setDeleteDialogOpen(false);
+						setSelectedMethod(null);
+					}}
+					loading={isDeleting}
+					title="Confirm Delete"
+					description="Are you sure you want to delete this payment method? This action cannot be undone."
+					cancelButtonText="Back"
+				/>
+			}
+		/>
+	);
 }

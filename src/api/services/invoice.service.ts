@@ -1,4 +1,6 @@
-import axiosClient from "../axiosClient";
+import { DownloadHelper } from "../../utils/DownloadHelper";
+import api from "../api";
+import type { PaginatedResponse, BaseQueryParams } from "../types/pagination";
 
 export interface InvoiceItemResponse {
   id: number;
@@ -42,6 +44,14 @@ export interface Invoice {
   invoiceDetails?: InvoiceDetails;
 }
 
+export interface InvoiceQueryParams extends BaseQueryParams {
+  statusId?: number;
+  issueDate?: string;
+  dueDate?: string;
+  totalGrossMin?: number;
+  totalGrossMax?: number;
+}
+
 export interface CreateInvoiceDto {
   appointmentId?: number;
   discountId?: number;
@@ -49,6 +59,9 @@ export interface CreateInvoiceDto {
   dueDate: string;
   paymentMethodId: number;
   currency: string;
+  buyerName?: string;
+  buyerAddress?: string;
+  buyerTaxId?: string;
 }
 
 export interface InvoiceItem {
@@ -69,13 +82,14 @@ export interface EditInvoiceItem {
 }
 
 export interface CreateInvoiceWithItemsDto {
+  appointmentId?: number;
   issueDate: string;
   dueDate: string;
   paymentMethodId: number;
-  currency: string;
+  discountId?: number;
   buyerName: string;
   buyerAddress: string;
-  buyerTaxId?: string;
+  buyerTaxId: string;
   items: InvoiceItem[];
 }
 
@@ -84,101 +98,84 @@ export interface UpdateInvoiceDto {
   issueDate: string;
   dueDate: string;
   paymentMethodId: number;
+  discountId?: number;
 }
 
-/**
- * Pobiera listę wszystkich faktur
- */
-export const getAll = async () => {
-  const response = await axiosClient.get<Invoice[]>("/Invoice");
-  return { data: response.data };
-};
+const $URL = "/invoices";
 
-/**
- * Pobiera fakturę po ID
- */
-export const getById = async (id: number) => {
-  const response = await axiosClient.get<Invoice>(`/Invoice/${id}`);
-  return { data: response.data };
-};
+export const InvoiceService = {
+  getAll: async (
+    params?: InvoiceQueryParams
+  ): Promise<PaginatedResponse<Invoice>> => {
+    const response = await api.get<PaginatedResponse<Invoice>>($URL, {
+      params,
+    });
+    return response.data;
+  },
 
-/**
- * Pobiera ID faktury po ID wizyty
- */
-export const getIdByAppointment = async (appointmentId: number) => {
-  const response = await axiosClient.get<number>(
-    `/Invoice/get-id-by-appointment?appointmentId=${appointmentId}`
-  );
-  return { data: response.data };
-};
+  getById: async (id: number): Promise<Invoice> => {
+    const response = await api.get<Invoice>(`${$URL}/${id}`);
+    return response.data;
+  },
 
-/**
- * Tworzy nową fakturę
- */
-export const create = async (invoice: CreateInvoiceDto | CreateInvoiceWithItemsDto) => {
-  const response = await axiosClient.post("/Invoice", invoice);
-  return { data: response.data };
-};
+  getIdByAppointment: async (appointmentId: number): Promise<number> => {
+    const response = await api.get<number>(`${$URL}/get-id-by-appointment`, {
+      params: { appointmentId },
+    });
+    return response.data;
+  },
 
-/**
- * Tworzy nową fakturę na podstawie wizyty
- */
-export const createFromAppointment = async (invoice: CreateInvoiceDto) => {
-  const response = await axiosClient.post("/Invoice/create-by-appointment", invoice);
-  return { data: response.data };
-};
+  create: async (
+    invoice: CreateInvoiceDto | CreateInvoiceWithItemsDto
+  ): Promise<any> => {
+    const response = await api.post($URL, invoice);
+    return response.data;
+  },
 
-/**
- * Aktualizuje fakturę
- */
-export const update = async (invoice: UpdateInvoiceDto) => {
-  const response = await axiosClient.put(`/Invoice/${invoice.id}`, invoice);
-  return { data: response.data };
-};
+  update: async (invoice: UpdateInvoiceDto): Promise<any> => {
+    const response = await api.patch(`${$URL}/${invoice.id}`, invoice);
+    return response.data;
+  },
 
-/**
- * Usuwa fakturę
- */
-export const deleteInvoice = async (id: number) => {
-  await axiosClient.delete(`/Invoice/${id}`);
-};
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`${$URL}/${id}`);
+  },
 
-/**
- * Aktualizuje pozycje faktury
- */
-export const updateItems = async (id: number, items: InvoiceItem[]) => {
-  const response = await axiosClient.put(`/Invoice/${id}/items`, items);
-  return { data: response.data };
-};
+  updateItems: async (id: number, items: InvoiceItem[]): Promise<any> => {
+    const response = await api.patch(`${$URL}/${id}/items`, items);
+    return response.data;
+  },
 
-/**
- * Aktualizuje informacje o nabywcy faktury
- */
-export const updateBuyerInfo = async (
-  id: number,
-  data: { name: string; address: string; taxId?: string },
-) => {
-  const response = await axiosClient.put(`/Invoice/${id}/buyer-info`, data);
-  return { data: response.data };
-};
+  updateBuyerInfo: async (
+    id: number,
+    data: { name: string; address: string; taxId?: string }
+  ): Promise<any> => {
+    const response = await api.patch(`${$URL}/${id}/buyer-info`, data);
+    return response.data;
+  },
 
-/**
- * Oznacza fakturę jako opłaconą
- */
-export const payInvoice = async (id: number) => {
-  const response = await axiosClient.patch(`/Invoice/${id}/pay`);
-  return { data: response.data };
-};
+  payInvoice: async (id: number): Promise<any> => {
+    const response = await api.patch(`${$URL}/${id}/pay`);
+    return response.data;
+  },
 
-export default {
-  getAll,
-  getById,
-  getIdByAppointment,
-  create,
-  createFromAppointment,
-  update,
-  updateItems,
-  updateBuyerInfo,
-  payInvoice,
-  delete: deleteInvoice,
+  issueInvoice: async (id: number): Promise<any> => {
+    const response = await api.patch(`${$URL}/${id}/issue`);
+    return response.data;
+  },
+
+  downloadPdf: async (
+    id: number,
+    invoiceNumber: string = "invoice"
+  ): Promise<void> => {
+    try {
+      const response = await api.get(`${$URL}/${id}/pdf`, {
+        responseType: "blob",
+      });
+      DownloadHelper.saveBlob(response.data, `${invoiceNumber}.pdf`);
+    } catch (err) {
+      const errorMessage = await DownloadHelper.parseBlobError(err);
+      throw new Error(errorMessage);
+    }
+  },
 };

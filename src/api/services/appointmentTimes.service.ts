@@ -1,21 +1,26 @@
-import axiosClient from "../axiosClient";
+import api from "../api";
 
 export interface AppointmentTime {
   value: string;
   label: string;
 }
 
-// Helper function to convert date from yyyy-MM-dd to dd.MM.yyyy format
 const formatDateForApi = (dateStr: string): string => {
-  const [year, month, day] = dateStr.split('-');
+  const [year, month, day] = dateStr.split("-");
   return `${day}.${month}.${year}`;
 };
 
+const $URL = "/schedules/available-slots";
+
 export const AppointmentTimesService = {
-  getAvailableSlots: (doctorId: number, date: string) => {
+  getAvailableSlots: async (
+    doctorId: number,
+    date: string
+  ): Promise<string[]> => {
     const formattedDate = formatDateForApi(date);
-    return axiosClient.get<string[]>("/Schedule/available-slots", {
+    const response = await api.get<string[]>($URL, {
       params: { doctorId, date: formattedDate },
     });
+    return response.data;
   },
 };

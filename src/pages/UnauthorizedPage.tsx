@@ -1,42 +1,39 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { PATHS } from "../routes/paths";
+import { Box, Button, Typography } from "@mui/material";
 
 const UnauthorizedPage: React.FC = () => {
-  const navigate = useNavigate();
-
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        height: "100vh",
-        textAlign: "center",
-        padding: "20px",
-      }}
-    >
-      <h1 style={{ fontSize: "72px", margin: "0" }}>403</h1>
-      <h2 style={{ fontSize: "24px", marginBottom: "20px" }}>Access Denied</h2>
-      <p style={{ fontSize: "16px", color: "#666", marginBottom: "30px" }}>
-        You do not have permission to view this page.
-      </p>
-      <button
-        onClick={() => navigate("/")}
-        style={{
-          padding: "10px 20px",
-          fontSize: "16px",
-          cursor: "pointer",
-          backgroundColor: "#007bff",
-          color: "white",
-          border: "none",
-          borderRadius: "4px",
-        }}
-      >
-        Go to Home Page
-      </button>
-    </div>
-  );
+	const navigate = useNavigate();
+	return (
+		<Box sx={{ textAlign: "center", py: 10 }}>
+			<Typography
+				variant="h1"
+				sx={{ fontSize: "72px", fontWeight: "bold" }}
+			>
+				403
+			</Typography>
+			<Typography
+				variant="h2"
+				sx={{ fontSize: "24px", mb: 2 }}
+			>
+				Access Denied
+			</Typography>
+			<Typography
+				variant="body1"
+				color="text.secondary"
+				sx={{ mb: 4 }}
+			>
+				You do not have permission to view this page.
+			</Typography>
+			<Button
+				variant="contained"
+				color="primary"
+				onClick={() => navigate(PATHS.HOME)}
+			>
+				Go to Home Page
+			</Button>
+		</Box>
+	);
 };
-
 export default UnauthorizedPage;

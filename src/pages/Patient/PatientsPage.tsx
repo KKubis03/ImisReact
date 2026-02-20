@@ -1,233 +1,253 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Container,
-  Box,
-  Typography,
-  Button,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  IconButton,
-  CircularProgress,
-  Alert,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
-  TextField,
-  InputAdornment,
-  Tooltip,
+	TextField,
+	InputAdornment,
+	FormControl,
+	InputLabel,
+	Select,
+	MenuItem,
 } from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import SearchIcon from "@mui/icons-material/Search";
 import PersonIcon from "@mui/icons-material/Person";
 import {
-  PatientsService,
-  type Patient,
+	PatientsService,
+	type Patient,
 } from "../../api/services/patients.service";
+import ListPageWrapper from "../../components/table/ListPageWrapper";
+import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import { useDataTable } from "../../hooks/useDataTable";
+import type { Column } from "../../interfaces/TableColumnInterface";
+import type { MenuAction } from "../../interfaces/MenuActionInterface";
+import { PATHS } from "../../routes/paths";
+import { useAuth } from "../../contexts/AuthContext";
 
 export default function PatientsPage() {
-  const navigate = useNavigate();
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [patientToDelete, setPatientToDelete] = useState<number | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-
-  useEffect(() => {
-    loadPatients();
-  }, [searchTerm]);
-
-  const loadPatients = async () => {
-    try {
-      setLoading(true);
-      const url = searchTerm
-        ? `/patients?search=${encodeURIComponent(searchTerm)}`
-        : "/patients";
-      const response = await PatientsService.getAll(url);
-      setPatients(response.data);
-      setError("");
-    } catch (err) {
-      setError("Failed to load patients");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDeleteClick = (id: number) => {
-    setPatientToDelete(id);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (patientToDelete === null) return;
-
-    try {
-      await PatientsService.delete(patientToDelete);
-      setDeleteDialogOpen(false);
-      setPatientToDelete(null);
-      loadPatients();
-    } catch (err) {
-      setError("Failed to delete patient");
-      setDeleteDialogOpen(false);
-    }
-  };
-
-  const handleDeleteCancel = () => {
-    setDeleteDialogOpen(false);
-    setPatientToDelete(null);
-  };
-
-  return (
-    <Container maxWidth="xl" sx={{ mt: 10, mb: 6 }}>
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 3,
-        }}
-      >
-        <Box>
-          <Typography variant="h3" color="primary">
-            Patients
-          </Typography>
-          <Typography variant="body1" mt={1}>
-            Below is a list of all patients currently registered in the system.
-          </Typography>
-        </Box>
-        <Tooltip title="Create new patient">
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={() => navigate("/patients/add")}
-          >
-            New Patient
-          </Button>
-        </Tooltip>
-      </Box>
-
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-
-      <Box sx={{ mb: 3 }}>
-        <TextField
-          fullWidth
-          placeholder="Search patients by Name or Surname"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          }}
-        />
-      </Box>
-
-      {loading ? (
-        <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
-          <CircularProgress />
-        </Box>
-      ) : (
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>First Name</TableCell>
-                <TableCell>Last Name</TableCell>
-                <TableCell>PESEL</TableCell>
-                <TableCell>Date of Birth</TableCell>
-                <TableCell>Gender</TableCell>
-                <TableCell>Email</TableCell>
-                <TableCell>Phone Number</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {patients.map((patient) => (
-                <TableRow key={patient.id}>
-                  <TableCell>{patient.firstName}</TableCell>
-                  <TableCell>{patient.lastName}</TableCell>
-                  <TableCell>{patient.pesel}</TableCell>
-                  <TableCell>{patient.dateOfBirth}</TableCell>
-                  <TableCell>{patient.gender}</TableCell>
-                  <TableCell>{patient.email}</TableCell>
-                  <TableCell>{patient.phoneNumber}</TableCell>
-                  <TableCell align="right">
-                    <Tooltip title="View Profile">
-                      <IconButton
-                        color="info"
-                        onClick={() =>
-                          navigate(`/patients/profile/${patient.id}`)
-                        }
-                      >
-                        <PersonIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Edit Patient">
-                      <IconButton
-                        color="primary"
-                        onClick={() => navigate(`/patients/edit/${patient.id}`)}
-                      >
-                        <EditIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Delete Patient">
-                      <IconButton
-                        color="error"
-                        onClick={() => handleDeleteClick(patient.id)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
-
-      <Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>
-        <DialogTitle>Confirm Delete</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Are you sure you want to delete this patient? This action cannot be
-            undone.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Tooltip title="Cancel">
-            <Button onClick={handleDeleteCancel} color="primary">
-              Cancel
-            </Button>
-          </Tooltip>
-          <Tooltip title="Delete this item">
-            <Button
-              onClick={handleDeleteConfirm}
-              color="error"
-              variant="contained"
-            >
-              Delete
-            </Button>
-          </Tooltip>
-        </DialogActions>
-      </Dialog>
-    </Container>
-  );
+	const navigate = useNavigate();
+	const { hasRole } = useAuth();
+	const [patients, setPatients] = useState<Patient[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState("");
+	const [filtersExpanded, setFiltersExpanded] = useState(false);
+	const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+	const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+	const [isDeleting, setIsDeleting] = useState(false);
+	const {
+		page,
+		setPage,
+		setTotalCount,
+		totalCount,
+		rowsPerPage,
+		sortBy,
+		sortOrder,
+		search,
+		filters,
+		queryParams,
+		handlePageChange,
+		handleRowsPerPageChange,
+		handleSortRequest,
+		handleSearchChange,
+		updateFilter,
+		clearAllFilters,
+	} = useDataTable<{
+		gender: string;
+	}>();
+	useEffect(() => {
+		loadPatients();
+	}, [queryParams]);
+	const loadPatients = async () => {
+		try {
+			setLoading(true);
+			const response = await PatientsService.getAll(queryParams);
+			setPatients(response.items);
+			setTotalCount(response.totalCount);
+			setError("");
+		} catch (err) {
+			setError("Failed to load patients");
+		} finally {
+			setLoading(false);
+		}
+	};
+	const handleDeleteConfirm = async () => {
+		if (!selectedPatient) return;
+		try {
+			setIsDeleting(true);
+			await PatientsService.delete(selectedPatient.id);
+			if (patients.length === 1 && page > 0) {
+				setPage((prev) => prev - 1);
+			} else {
+				loadPatients();
+			}
+			setDeleteDialogOpen(false);
+		} catch (err) {
+			setError("Failed to delete patient");
+		} finally {
+			setIsDeleting(false);
+			setSelectedPatient(null);
+		}
+	};
+	const handleMenuOpen = (
+		event: React.MouseEvent<HTMLElement>,
+		patient: Patient,
+	) => {
+		setAnchorEl(event.currentTarget);
+		setSelectedPatient(patient);
+	};
+	const handleMenuClose = () => {
+		setAnchorEl(null);
+	};
+	const columns: Column<Patient>[] = [
+		{
+			id: "firstName",
+			label: "First Name",
+			sortable: true,
+		},
+		{
+			id: "lastName",
+			label: "Last Name",
+			sortable: true,
+		},
+		{
+			id: "pesel",
+			label: "PESEL",
+			sortable: false,
+		},
+		{
+			id: "dateOfBirth",
+			label: "Date of Birth",
+			sortable: true,
+		},
+		{
+			id: "gender",
+			label: "Gender",
+			sortable: false,
+		},
+		{
+			id: "email",
+			label: "Email",
+			sortable: false,
+		},
+		{
+			id: "phoneNumber",
+			label: "Phone Number",
+			sortable: false,
+		},
+	];
+	const menuActions: MenuAction<Patient>[] = [
+		{
+			label: "View Profile",
+			icon: (
+				<PersonIcon
+					fontSize="small"
+					color="primary"
+				/>
+			),
+			onClick: (patient) => navigate(PATHS.PATIENTS_PROFILE(patient.id)),
+			show: () => hasRole("Admin") || hasRole("Receptionist") || hasRole("Doctor"),
+		},
+		{
+			label: "Edit Patient",
+			icon: (
+				<EditIcon
+					fontSize="small"
+					color="primary"
+				/>
+			),
+			onClick: (patient) => navigate(PATHS.PATIENTS_EDIT(patient.id)),
+			show: () => hasRole("Admin"),
+		},
+		{
+			label: "Delete Patient",
+			icon: (
+				<DeleteIcon
+					fontSize="small"
+					color="error"
+				/>
+			),
+			onClick: () => setDeleteDialogOpen(true),
+			show: () => hasRole("Admin"),
+		},
+	];
+	return (
+		<ListPageWrapper
+			title="Patients"
+			description="Manage patient records in the system."
+			addButtonTooltip="Create new Patient"
+			addButtonText="New Patient"
+			addButtonPath={PATHS.PATIENTS_ADD}
+			isLoading={loading}
+			error={error}
+			data={patients}
+			columns={columns}
+			filtersExpanded={filtersExpanded}
+			onFiltersExpandedChange={setFiltersExpanded}
+			onClearFilters={clearAllFilters}
+			filters={
+				<>
+					<TextField
+						fullWidth
+						size="small"
+						label="Search"
+						placeholder="Name, Surname or PESEL"
+						value={search}
+						onChange={handleSearchChange}
+						InputProps={{
+							startAdornment: (
+								<InputAdornment position="start">
+									<SearchIcon />
+								</InputAdornment>
+							),
+						}}
+					/>
+					<FormControl
+						fullWidth
+						size="small"
+					>
+						<InputLabel>Gender</InputLabel>
+						<Select
+							value={filters.gender || ""}
+							onChange={(e) => updateFilter("gender", e.target.value)}
+							label="Gender"
+						>
+							<MenuItem value="">All</MenuItem>
+							<MenuItem value="Male">Male</MenuItem>
+							<MenuItem value="Female">Female</MenuItem>
+						</Select>
+					</FormControl>
+				</>
+			}
+			pagination={{
+				totalCount,
+				page,
+				rowsPerPage,
+				onPageChange: handlePageChange,
+				onRowsPerPageChange: handleRowsPerPageChange,
+			}}
+			sorting={{ sortBy, sortOrder, onSort: handleSortRequest }}
+			actions={{
+				anchorEl,
+				selectedItem: selectedPatient,
+				onMenuClose: handleMenuClose,
+				onActionClick: handleMenuOpen,
+				menuActions,
+			}}
+			dialogs={
+				<ConfirmDialog
+					open={deleteDialogOpen}
+					onConfirm={handleDeleteConfirm}
+					onClose={() => {
+						setDeleteDialogOpen(false);
+						setSelectedPatient(null);
+					}}
+					loading={isDeleting}
+					title="Confirm Delete"
+					description="Are you sure you want to delete this patient? This action cannot be undone."
+					cancelButtonText="Back"
+				/>
+			}
+		/>
+	);
 }

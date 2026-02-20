@@ -1,215 +1,196 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Container,
-  Box,
-  Typography,
-  Button,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  IconButton,
-  CircularProgress,
-  Alert,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
-  TextField,
-  InputAdornment,
-  Tooltip,
-} from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
+import { TextField, InputAdornment } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import SearchIcon from "@mui/icons-material/Search";
 import {
-  AppointmentStatusesService,
-  type AppointmentStatus,
+	AppointmentStatusesService,
+	type AppointmentStatus,
 } from "../../api/services/appointmentStatuses.service";
+import { useDataTable } from "../../hooks/useDataTable";
+import ListPageWrapper from "../../components/table/ListPageWrapper";
+import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import type { Column } from "../../interfaces/TableColumnInterface";
+import type { MenuAction } from "../../interfaces/MenuActionInterface";
+import { PATHS } from "../../routes/paths";
 
 export default function AppointmentStatusesPage() {
-  const navigate = useNavigate();
-  const [statuses, setStatuses] = useState<AppointmentStatus[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [statusToDelete, setStatusToDelete] = useState<number | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-
-  useEffect(() => {
-    loadStatuses();
-  }, [searchTerm]);
-
-  const loadStatuses = async () => {
-    try {
-      setLoading(true);
-      const url = searchTerm
-        ? `/appointmentstatus?search=${encodeURIComponent(searchTerm)}`
-        : "/appointmentstatus";
-      const response = await AppointmentStatusesService.getAll(url);
-      setStatuses(response.data);
-      setError("");
-    } catch (err) {
-      setError("Failed to load appointment statuses");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDeleteClick = (id: number) => {
-    setStatusToDelete(id);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (statusToDelete === null) return;
-
-    try {
-      await AppointmentStatusesService.delete(statusToDelete);
-      setDeleteDialogOpen(false);
-      setStatusToDelete(null);
-      loadStatuses();
-    } catch (err) {
-      setError("Failed to delete status");
-      setDeleteDialogOpen(false);
-    }
-  };
-
-  const handleDeleteCancel = () => {
-    setDeleteDialogOpen(false);
-    setStatusToDelete(null);
-  };
-
-  return (
-    <Container maxWidth="lg" sx={{ mt: 10, mb: 6 }}>
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 3,
-        }}
-      >
-        <Box>
-          <Typography variant="h3" color="primary">
-            Appointment Statuses
-          </Typography>
-          <Typography variant="body1" mt={1}>
-            Below is the list of statuses.
-          </Typography>
-        </Box>
-        <Tooltip title="Create new appointment status">
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={() => navigate("/appointment-statuses/add")}
-          >
-            New Status
-          </Button>
-        </Tooltip>
-      </Box>
-
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-
-      <Box sx={{ mb: 2 }}>
-        <TextField
-          fullWidth
-          variant="outlined"
-          placeholder="Search appointment statuses by Name"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          }}
-        />
-      </Box>
-
-      {loading ? (
-        <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
-          <CircularProgress />
-        </Box>
-      ) : (
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Status Name</TableCell>
-                <TableCell>Description</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {statuses.map((status) => (
-                <TableRow key={status.id}>
-                  <TableCell>{status.statusName}</TableCell>
-                  <TableCell>{status.description}</TableCell>
-                  <TableCell align="right">
-                    <Tooltip title="Edit">
-                      <IconButton
-                        color="primary"
-                        onClick={() =>
-                          navigate(`/appointment-statuses/edit/${status.id}`)
-                        }
-                      >
-                        <EditIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Delete">
-                      <IconButton
-                        color="error"
-                        onClick={() => handleDeleteClick(status.id)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
-
-      <Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>
-        <DialogTitle>Confirm Delete</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Are you sure you want to delete this status? This action cannot be
-            undone.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Tooltip title="Cancel">
-            <Button onClick={handleDeleteCancel} color="primary">
-              Cancel
-            </Button>
-          </Tooltip>
-          <Tooltip title="Delete this item">
-            <Button
-              onClick={handleDeleteConfirm}
-              color="error"
-              variant="contained"
-            >
-              Delete
-            </Button>
-          </Tooltip>
-        </DialogActions>
-      </Dialog>
-    </Container>
-  );
+	const navigate = useNavigate();
+	const [statuses, setStatuses] = useState<AppointmentStatus[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState("");
+	const [filtersExpanded, setFiltersExpanded] = useState(false);
+	const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+	const [selectedStatus, setSelectedStatus] =
+		useState<AppointmentStatus | null>(null);
+	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+	const [isDeleting, setIsDeleting] = useState(false);
+	const {
+		page,
+		setPage,
+		setTotalCount,
+		totalCount,
+		rowsPerPage,
+		sortBy,
+		sortOrder,
+		search,
+		queryParams,
+		handlePageChange,
+		handleRowsPerPageChange,
+		handleSortRequest,
+		handleSearchChange,
+		clearAllFilters,
+	} = useDataTable();
+	useEffect(() => {
+		loadStatuses();
+	}, [queryParams]);
+	const loadStatuses = async () => {
+		try {
+			setLoading(true);
+			const response = await AppointmentStatusesService.getAll(queryParams);
+			setStatuses(response.items || []);
+			setTotalCount(response.totalCount || 0);
+			setError("");
+		} catch (err) {
+			setError("Failed to load appointment statuses");
+			setStatuses([]);
+			setTotalCount(0);
+		} finally {
+			setLoading(false);
+		}
+	};
+	const handleDeleteConfirm = async () => {
+		if (!selectedStatus) return;
+		try {
+			setIsDeleting(true);
+			await AppointmentStatusesService.delete(selectedStatus.id);
+			if (statuses.length === 1 && page > 0) {
+				setPage((prev) => prev - 1);
+			} else {
+				loadStatuses();
+			}
+			setDeleteDialogOpen(false);
+		} catch (err) {
+			setError("Failed to delete status");
+		} finally {
+			setIsDeleting(false);
+			setSelectedStatus(null);
+		}
+	};
+	const handleMenuOpen = (
+		event: React.MouseEvent<HTMLElement>,
+		status: AppointmentStatus,
+	) => {
+		setAnchorEl(event.currentTarget);
+		setSelectedStatus(status);
+	};
+	const handleMenuClose = () => {
+		setAnchorEl(null);
+	};
+	const statusColumns: Column<AppointmentStatus>[] = [
+		{
+			id: "statusName",
+			label: "Status Name",
+			sortable: true,
+			sortkey: "name",
+		},
+		{
+			id: "description",
+			label: "Description",
+			sortable: true,
+		},
+	];
+	const statusActions: MenuAction<AppointmentStatus>[] = [
+		{
+			label: "Edit Status",
+			icon: (
+				<EditIcon
+					fontSize="small"
+					color="primary"
+				/>
+			),
+			onClick: (status) => navigate(PATHS.APPOINTMENT_STATUSES_EDIT(status.id)),
+		},
+		{
+			label: "Delete Status",
+			icon: (
+				<DeleteIcon
+					fontSize="small"
+					color="error"
+				/>
+			),
+			onClick: () => setDeleteDialogOpen(true),
+		},
+	];
+	return (
+		<ListPageWrapper
+			title="Appointment Statuses"
+			description="Manage your clinic appointment statuses."
+			addButtonText="New Status"
+			addButtonTooltip="Create new Appointment Status"
+			addButtonPath={PATHS.APPOINTMENT_STATUSES_ADD}
+			isLoading={loading}
+			error={error}
+			data={statuses}
+			columns={statusColumns}
+			filtersExpanded={filtersExpanded}
+			onFiltersExpandedChange={setFiltersExpanded}
+			onClearFilters={clearAllFilters}
+			filters={
+				<>
+					<TextField
+						fullWidth
+						size="small"
+						label="Search"
+						placeholder="Status Name"
+						value={search}
+						onChange={handleSearchChange}
+						InputProps={{
+							startAdornment: (
+								<InputAdornment position="start">
+									<SearchIcon />
+								</InputAdornment>
+							),
+						}}
+					/>
+				</>
+			}
+			pagination={{
+				totalCount,
+				page,
+				rowsPerPage,
+				onPageChange: handlePageChange,
+				onRowsPerPageChange: handleRowsPerPageChange,
+			}}
+			sorting={{
+				sortBy,
+				sortOrder,
+				onSort: handleSortRequest,
+			}}
+			actions={{
+				anchorEl,
+				selectedItem: selectedStatus,
+				onMenuClose: handleMenuClose,
+				onActionClick: handleMenuOpen,
+				menuActions: statusActions,
+			}}
+			dialogs={
+				<>
+					<ConfirmDialog
+						open={deleteDialogOpen}
+						onConfirm={handleDeleteConfirm}
+						onClose={() => {
+							setDeleteDialogOpen(false);
+							setSelectedStatus(null);
+						}}
+						loading={isDeleting}
+						title="Confirm Delete"
+						description="Are you sure you want to delete this appointment status? This action cannot be undone."
+						cancelButtonText="Back"
+					/>
+				</>
+			}
+		/>
+	);
 }

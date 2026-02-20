@@ -1,385 +1,369 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Container,
-  Box,
-  Typography,
-  Button,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  IconButton,
-  Alert,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
-  Tooltip,
-  Chip,
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText,
-  Skeleton,
+	Chip,
+	MenuItem,
+	TextField,
+	InputAdornment,
+	FormControl,
+	InputLabel,
+	Select,
 } from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
-import {
-  AppointmentsService,
-  type Appointment,
-} from "../../api/services/appointments.service";
-import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
-import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import CancelIcon from "@mui/icons-material/Cancel";
+import SearchIcon from "@mui/icons-material/Search";
 import ArticleIcon from "@mui/icons-material/Article";
+import {
+	AppointmentsService,
+	type Appointment,
+	type AppointmentListItem,
+} from "../../api/services/appointments.service";
+import { AppointmentStatusesService } from "../../api/services/appointmentStatuses.service";
+import { AppointmentTypesService } from "../../api/services/appointmentType.service";
+import { useDataTable } from "../../hooks/useDataTable";
+import ListPageWrapper from "../../components/table/ListPageWrapper";
+import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import type { Column } from "../../interfaces/TableColumnInterface";
+import type { MenuAction } from "../../interfaces/MenuActionInterface";
+import type { SelectListItem } from "../../api/types/pagination";
+import { PATHS } from "../../routes/paths";
+import { useAuth } from "../../contexts/AuthContext";
 
 export default function AppointmentsPage() {
-  const navigate = useNavigate();
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [appointmentToDelete, setAppointmentToDelete] = useState<number | null>(
-    null,
-  );
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [selectedAppointment, setSelectedAppointment] =
-    useState<Appointment | null>(null);
-
-  useEffect(() => {
-    loadAppointments();
-  }, []);
-
-  const loadAppointments = async () => {
-    try {
-      setLoading(true);
-      await new Promise((resolve) => setTimeout(resolve, 100)); // 0.1 second delay
-      const response = await AppointmentsService.getAll();
-      setAppointments(response.data);
-      setError("");
-    } catch (err) {
-      setError("Failed to load appointments");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDeleteClick = (id: number) => {
-    setAppointmentToDelete(id);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (appointmentToDelete === null) return;
-
-    try {
-      await AppointmentsService.delete(appointmentToDelete);
-      setDeleteDialogOpen(false);
-      setAppointmentToDelete(null);
-      loadAppointments();
-    } catch (err) {
-      setError("Failed to delete appointment");
-      setDeleteDialogOpen(false);
-    }
-  };
-
-  const handleDeleteCancel = () => {
-    setDeleteDialogOpen(false);
-    setAppointmentToDelete(null);
-  };
-
-  const handleMenuOpen = (
-    event: React.MouseEvent<HTMLElement>,
-    appointment: Appointment,
-  ) => {
-    setAnchorEl(event.currentTarget);
-    setSelectedAppointment(appointment);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-    setSelectedAppointment(null);
-  };
-
-  const handleViewDetails = (appointmentId: number) => {
-    handleMenuClose();
-    navigate(`/appointments/details/${appointmentId}`);
-  };
-
-  const handleViewInvoice = (invoiceId: number) => {
-    handleMenuClose();
-    navigate(`/invoices/${invoiceId}`);
-  };
-
-  const handleCreateInvoice = (appointmentId: number) => {
-    handleMenuClose();
-    navigate(`/invoices/add-by-appointment`, {
-      state: { appointmentId },
-    });
-  };
-
-  const handleEditAppointment = (appointmentId: number) => {
-    handleMenuClose();
-    navigate(`/appointments/edit/${appointmentId}`);
-  };
-
-  const handleDeleteAppointment = (appointmentId: number) => {
-    handleMenuClose();
-    handleDeleteClick(appointmentId);
-  };
-
-  return (
-    <Container maxWidth="xl" sx={{ mt: 5, mb: 6 }}>
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 3,
-        }}
-      >
-        <Box>
-          <Typography variant="h3" color="primary">
-            Appointments
-          </Typography>
-          <Typography variant="body1" mt={1}>
-            Below is a list of all appointments in the system.
-          </Typography>
-        </Box>
-        <Tooltip title="Create new appointment">
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={() => navigate("/appointments/add")}
-          >
-            New Appointment
-          </Button>
-        </Tooltip>
-      </Box>
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-
-      {loading ? (
-        <TableContainer component={Paper}>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Patient</TableCell>
-                <TableCell>Doctor</TableCell>
-                <TableCell>Date</TableCell>
-                <TableCell>Time</TableCell>
-                <TableCell>Type</TableCell>
-                <TableCell>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                    Status
-                    <Tooltip title="View all appointment statuses">
-                      <IconButton
-                        size="small"
-                        onClick={() => navigate("/appointment-statuses")}
-                        sx={{ padding: 0.5 }}
-                      >
-                        <HelpOutlineIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
-                </TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {[...Array(5)].map((_, index) => (
-                <TableRow key={index}>
-                  <TableCell>
-                    <Skeleton />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton />
-                  </TableCell>
-                  <TableCell align="right">
-                    <Skeleton />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      ) : (
-        <TableContainer component={Paper}>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Patient</TableCell>
-                <TableCell>Doctor</TableCell>
-                <TableCell>Date</TableCell>
-                <TableCell>Time</TableCell>
-                <TableCell>Type</TableCell>
-                <TableCell>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                    Status
-                    <Tooltip title="View all appointment statuses">
-                      <IconButton
-                        size="small"
-                        onClick={() => navigate("/appointment-statuses")}
-                        sx={{ padding: 0.5 }}
-                      >
-                        <HelpOutlineIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
-                </TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {appointments.map((appointment) => {
-                const dateTime = new Date(appointment.appointmentDate);
-                const date = dateTime.toLocaleDateString();
-                const time = dateTime.toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                });
-
-                return (
-                  <TableRow key={appointment.id}>
-                    <TableCell>{`${appointment.patientName} ${appointment.patientSurname}`}</TableCell>
-                    <TableCell>{`${appointment.doctorName} ${appointment.doctorSurname}`}</TableCell>
-                    <TableCell>{date}</TableCell>
-                    <TableCell>{time}</TableCell>
-                    <TableCell>{appointment.appointmentTypeName}</TableCell>
-                    <TableCell>
-                      <Chip
-                        size="small"
-                        variant="outlined"
-                        label={appointment.appointmentStatusName}
-                      ></Chip>
-                    </TableCell>
-                    <TableCell align="right">
-                      <IconButton
-                        onClick={(e) => handleMenuOpen(e, appointment)}
-                      >
-                        <MoreVertIcon />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
-
-      {/* Actions Menu */}
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-      >
-        {selectedAppointment && (
-          <>
-            <MenuItem onClick={() => handleViewDetails(selectedAppointment.id)}>
-              <ListItemIcon>
-                <InfoOutlinedIcon fontSize="small" color="primary" />
-              </ListItemIcon>
-              <ListItemText>
-                {selectedAppointment.hasDetails
-                  ? "View Details"
-                  : "Add Details"}
-              </ListItemText>
-            </MenuItem>
-            {selectedAppointment.invoiceId ? (
-              <MenuItem
-                onClick={() =>
-                  handleViewInvoice(selectedAppointment.invoiceId!)
-                }
-              >
-                <ListItemIcon>
-                  <ArticleIcon fontSize="small" color="primary" />
-                </ListItemIcon>
-                <ListItemText>View Invoice</ListItemText>
-              </MenuItem>
-            ) : (
-              selectedAppointment.appointmentStatusName === "Completed" && (
-                <MenuItem
-                  onClick={() => handleCreateInvoice(selectedAppointment.id)}
-                >
-                  <ListItemIcon>
-                    <ArticleIcon fontSize="small" color="secondary" />
-                  </ListItemIcon>
-                  <ListItemText>Create Invoice</ListItemText>
-                </MenuItem>
-              )
-            )}
-            {selectedAppointment.appointmentStatusName === "Planned" && (
-              <MenuItem
-                onClick={() => handleEditAppointment(selectedAppointment.id)}
-              >
-                <ListItemIcon>
-                  <EditIcon fontSize="small" color="primary" />
-                </ListItemIcon>
-                <ListItemText>Edit Appointment</ListItemText>
-              </MenuItem>
-            )}
-            {selectedAppointment.appointmentStatusName === "Planned" && (
-              <MenuItem
-                onClick={() => handleDeleteAppointment(selectedAppointment.id)}
-              >
-                <ListItemIcon>
-                  <DeleteIcon fontSize="small" color="error" />
-                </ListItemIcon>
-                <ListItemText>Delete Appointment</ListItemText>
-              </MenuItem>
-            )}
-          </>
-        )}
-      </Menu>
-
-      <Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>
-        <DialogTitle>Confirm Delete</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Are you sure you want to delete this appointment? This action cannot
-            be undone.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Tooltip title="Cancel">
-            <Button onClick={handleDeleteCancel} color="primary">
-              Cancel
-            </Button>
-          </Tooltip>
-          <Tooltip title="Delete this item">
-            <Button
-              onClick={handleDeleteConfirm}
-              color="error"
-              variant="contained"
-            >
-              Delete
-            </Button>
-          </Tooltip>
-        </DialogActions>
-      </Dialog>
-    </Container>
-  );
+	const navigate = useNavigate();
+	const { hasRole } = useAuth();
+	const [appointments, setAppointments] = useState<AppointmentListItem[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState("");
+	const [statuses, setStatuses] = useState<SelectListItem[]>([]);
+	const [types, setTypes] = useState<SelectListItem[]>([]);
+	const [filtersExpanded, setFiltersExpanded] = useState(false);
+	const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+	const [selectedAppointment, setSelectedAppointment] =
+		useState<AppointmentListItem | null>(null);
+	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+	const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+	const [isDeleting, setIsDeleting] = useState(false);
+	const [isCancelling, setIsCancelling] = useState(false);
+	const {
+		page,
+		setPage,
+		setTotalCount,
+		totalCount,
+		rowsPerPage,
+		sortBy,
+		sortOrder,
+		search,
+		filters,
+		queryParams,
+		handlePageChange,
+		handleRowsPerPageChange,
+		handleSortRequest,
+		handleSearchChange,
+		updateFilter,
+		clearAllFilters,
+	} = useDataTable<{
+		statusId: number | "";
+		typeId: number | "";
+		date: string;
+	}>();
+	useEffect(() => {
+		if (filtersExpanded) loadFilterOptions();
+	}, [filtersExpanded]);
+	useEffect(() => {
+		loadAppointments();
+	}, [queryParams]);
+	const loadFilterOptions = async () => {
+		try {
+			const [statusesRes, typesRes] = await Promise.all([
+				AppointmentStatusesService.getSelectList(),
+				AppointmentTypesService.getSelectList(),
+			]);
+			setStatuses(statusesRes);
+			setTypes(typesRes);
+		} catch (err) {
+			setError("Failed to load filter options");
+		}
+	};
+	const loadAppointments = async () => {
+		try {
+			setLoading(true);
+			const response = await AppointmentsService.getAll(queryParams);
+			setAppointments(response.items);
+			setTotalCount(response.totalCount);
+			setError("");
+		} catch (err) {
+			setError("Failed to load appointments");
+		} finally {
+			setLoading(false);
+		}
+	};
+	const handleDeleteConfirm = async () => {
+		if (!selectedAppointment) return;
+		try {
+			setIsDeleting(true);
+			await AppointmentsService.delete(selectedAppointment.id);
+			if (appointments.length === 1 && page > 0) {
+				setPage((prev) => prev - 1);
+			} else {
+				loadAppointments();
+			}
+			setDeleteDialogOpen(false);
+		} catch (err) {
+			setError("Failed to delete appointment");
+		} finally {
+			setIsDeleting(false);
+			setSelectedAppointment(null);
+		}
+	};
+	const handleCancelConfirm = async () => {
+		if (!selectedAppointment) return;
+		try {
+			setIsCancelling(true);
+			await AppointmentsService.cancel(selectedAppointment.id);
+			setCancelDialogOpen(false);
+			loadAppointments();
+		} catch (err) {
+			setError("Failed to cancel appointment");
+		} finally {
+			setIsCancelling(false);
+			setSelectedAppointment(null);
+		}
+	};
+	const handleMenuOpen = (
+		event: React.MouseEvent<HTMLElement>,
+		appointment: AppointmentListItem,
+	) => {
+		setAnchorEl(event.currentTarget);
+		setSelectedAppointment(appointment);
+	};
+	const handleMenuClose = () => {
+		setAnchorEl(null);
+	};
+	const appointmentColumns: Column<Appointment>[] = [
+		{ id: "patientFullName", label: "Patient", sortable: true },
+		{ id: "doctorFullName", label: "Doctor", sortable: true },
+		{
+			id: "date",
+			label: "Date",
+			sortable: true,
+			render: (row) => new Date(row.appointmentDate).toLocaleDateString(),
+		},
+		{
+			id: "time",
+			label: "Time",
+			render: (row) =>
+				new Date(row.appointmentDate).toLocaleTimeString([], {
+					hour: "2-digit",
+					minute: "2-digit",
+				}),
+		},
+		{ id: "appointmentTypeName", label: "Type", sortable: true },
+		{
+			id: "status",
+			label: "Status",
+			sortable: true,
+			render: (row) => (
+				<Chip
+					size="small"
+					color="primary"
+					label={row.appointmentStatusName}
+				/>
+			),
+		},
+	];
+	const appointmentActions: MenuAction<AppointmentListItem>[] = [
+		{
+			label: "View Invoice",
+			icon: (
+				<ArticleIcon
+					fontSize="small"
+					color="primary"
+				/>
+			),
+			onClick: (item) => navigate(PATHS.INVOICES_DETAILS(item.invoiceId ?? 0)),
+			show: (item) => !!item.invoiceId,
+		},
+		{
+			label: "Create Invoice",
+			icon: (
+				<ArticleIcon
+					fontSize="small"
+					color="secondary"
+				/>
+			),
+			onClick: (item) =>
+				navigate(PATHS.INVOICES_ADD, { state: { appointmentId: item.id } }),
+			show: (item) =>
+				!item.invoiceId &&
+				item.appointmentStatusName === "Completed" &&
+				(hasRole("Admin") || hasRole("Receptionist") || hasRole("Manager")),
+		},
+		{
+			label: "Edit Appointment",
+			icon: (
+				<EditIcon
+					fontSize="small"
+					color="primary"
+				/>
+			),
+			onClick: (item) => navigate(PATHS.APPOINTMENTS_EDIT(item.id)),
+			show: (item) => item.appointmentStatusName === "Planned",
+		},
+		{
+			label: "Cancel Appointment",
+			icon: (
+				<CancelIcon
+					fontSize="small"
+					color="error"
+				/>
+			),
+			onClick: () => setCancelDialogOpen(true),
+			show: (item) =>
+				item.appointmentStatusName === "Planned" &&
+				(hasRole("Admin") || hasRole("Receptionist")),
+		},
+		{
+			label: "Delete Appointment",
+			icon: (
+				<DeleteIcon
+					fontSize="small"
+					color="error"
+				/>
+			),
+			onClick: () => setDeleteDialogOpen(true),
+			show: () => hasRole("Admin"),
+		},
+	];
+	return (
+		<ListPageWrapper
+			title="Appointments"
+			description="Manage your clinic appointments."
+			addButtonText="New Appointment"
+			addButtonTooltip="Create new Appointment"
+			addButtonPath={PATHS.APPOINTMENTS_ADD}
+			isLoading={loading}
+			error={error}
+			data={appointments}
+			columns={appointmentColumns}
+			filtersExpanded={filtersExpanded}
+			onFiltersExpandedChange={setFiltersExpanded}
+			onClearFilters={clearAllFilters}
+			filters={
+				<>
+					<TextField
+						fullWidth
+						size="small"
+						label="Search"
+						placeholder="Patient or Doctor"
+						value={search}
+						onChange={handleSearchChange}
+						InputProps={{
+							startAdornment: (
+								<InputAdornment position="start">
+									<SearchIcon />
+								</InputAdornment>
+							),
+						}}
+					/>
+					<FormControl
+						fullWidth
+						size="small"
+					>
+						<InputLabel>Type</InputLabel>
+						<Select
+							value={filters.typeId || ""}
+							onChange={(e) => updateFilter("typeId", e.target.value)}
+							label="Type"
+						>
+							<MenuItem value="">All</MenuItem>
+							{types.map((t) => (
+								<MenuItem
+									key={t.id}
+									value={t.id}
+								>
+									{t.displayName}
+								</MenuItem>
+							))}
+						</Select>
+					</FormControl>
+					<TextField
+						fullWidth
+						size="small"
+						label="Date"
+						type="date"
+						value={filters.date || ""}
+						onChange={(e) => updateFilter("date", e.target.value)}
+						InputLabelProps={{ shrink: true }}
+					/>
+					<FormControl
+						fullWidth
+						size="small"
+					>
+						<InputLabel>Status</InputLabel>
+						<Select
+							value={filters.statusId || ""}
+							onChange={(e) => updateFilter("statusId", e.target.value)}
+							label="Status"
+						>
+							<MenuItem value="">All</MenuItem>
+							{statuses.map((s) => (
+								<MenuItem
+									key={s.id}
+									value={s.id}
+								>
+									{s.displayName}
+								</MenuItem>
+							))}
+						</Select>
+					</FormControl>
+				</>
+			}
+			pagination={{
+				totalCount,
+				page,
+				rowsPerPage,
+				onPageChange: handlePageChange,
+				onRowsPerPageChange: handleRowsPerPageChange,
+			}}
+			sorting={{ sortBy, sortOrder, onSort: handleSortRequest }}
+			actions={{
+				anchorEl,
+				selectedItem: selectedAppointment,
+				onMenuClose: handleMenuClose,
+				onActionClick: handleMenuOpen,
+				menuActions: appointmentActions,
+			}}
+			dialogs={
+				<>
+					<ConfirmDialog
+						open={deleteDialogOpen}
+						onConfirm={handleDeleteConfirm}
+						onClose={() => {
+							setDeleteDialogOpen(false);
+							setSelectedAppointment(null);
+						}}
+						loading={isDeleting}
+						title="Confirm Delete"
+						description="Are you sure you want to delete this appointment? This action cannot be undone."
+						cancelButtonText="Back"
+					/>
+					<ConfirmDialog
+						open={cancelDialogOpen}
+						onConfirm={handleCancelConfirm}
+						onClose={() => {
+							setCancelDialogOpen(false);
+							setSelectedAppointment(null);
+						}}
+						loading={isCancelling}
+						title="Confirm Cancel"
+						description="Are you sure you want to cancel this appointment?"
+						confirmButtonText="Cancel Appointment"
+						cancelButtonText="Back"
+					/>
+				</>
+			}
+		/>
+	);
 }

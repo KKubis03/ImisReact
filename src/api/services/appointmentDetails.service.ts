@@ -1,4 +1,4 @@
-import axiosClient from "../axiosClient";
+import api from "../api";
 
 export interface AppointmentDetails {
   id: number;
@@ -8,13 +8,30 @@ export interface AppointmentDetails {
   recommendations: string | null;
 }
 
+const $URL = "/appointmentDetails";
+
 export const AppointmentDetailsService = {
-  getByAppointmentId: (appointmentId: number) =>
-    axiosClient.get<AppointmentDetails>(`/AppointmentDetails/by-appointment/${appointmentId}`),
+  getByAppointmentId: async (
+    appointmentId: number
+  ): Promise<AppointmentDetails> => {
+    const response = await api.get<AppointmentDetails>(
+      `${$URL}/by-appointment/${appointmentId}`
+    );
+    return response.data;
+  },
 
-  create: (data: Omit<AppointmentDetails, "id">) =>
-    axiosClient.post<AppointmentDetails>("/AppointmentDetails", data),
+  create: async (
+    data: Omit<AppointmentDetails, "id">
+  ): Promise<AppointmentDetails> => {
+    const response = await api.post<AppointmentDetails>($URL, data);
+    return response.data;
+  },
 
-  update: (id: number, data: AppointmentDetails) =>
-    axiosClient.put<AppointmentDetails>(`/AppointmentDetails/${id}`, data),
+  update: async (
+    id: number,
+    data: AppointmentDetails
+  ): Promise<AppointmentDetails> => {
+    const response = await api.put<AppointmentDetails>(`${$URL}/${id}`, data);
+    return response.data;
+  },
 };
